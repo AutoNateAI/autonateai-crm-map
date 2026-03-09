@@ -7,11 +7,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { crmService } from './services/CRMService.js';
 import { DataTransformationService } from './services/DataTransformationService.js';
+import { mapboxConfig } from './config/mapbox.js';
 
 class App {
     constructor() {
         this.currentView = 'geo-map';
         this.isRegisterMode = false;
+        this.map = null;
         this.init();
     }
 
@@ -25,10 +27,8 @@ class App {
     monitorAuthState() {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                console.log("Auth Status: Authenticated as", user.email);
                 this.onLoginSuccess(user);
             } else {
-                console.log("Auth Status: Unauthenticated");
                 this.onLogoutSuccess();
             }
         });
@@ -45,7 +45,6 @@ class App {
             const email = emailInput.value;
             const password = passInput.value;
             errorDiv.classList.add('hidden');
-
             try {
                 if (this.isRegisterMode) {
                     await createUserWithEmailAndPassword(auth, email, password);
@@ -61,7 +60,6 @@ class App {
         toggleBtn.addEventListener('click', () => {
             this.isRegisterMode = !this.isRegisterMode;
             document.getElementById('auth-title').textContent = this.isRegisterMode ? "Create Account" : "Command Center Access";
-            document.getElementById('auth-subtitle').textContent = this.isRegisterMode ? "Register new operator" : "Authentication Required";
             primaryBtn.textContent = this.isRegisterMode ? "Register" : "Initialize Session";
             toggleBtn.textContent = this.isRegisterMode ? "Already have an account? Login" : "Need an account? Register";
         });
@@ -83,7 +81,6 @@ class App {
     onLogoutSuccess() {
         document.getElementById('app').classList.add('hidden');
         document.getElementById('auth-screen').classList.remove('hidden');
-        document.getElementById('user-display').textContent = "";
     }
 
     bindNavigation() {
@@ -109,39 +106,109 @@ class App {
             activeView.classList.add('active');
         }
 
+        if (this.currentView === 'geo-map') this.initMap();
+        if (this.currentView === 'cognitive-map') this.initCognitiveGraph();
+        
         this.updateSidebarContent();
+    }
+
+    initMap() {
+        if (this.map) return;
+        
+        mapboxgl.accessToken = mapboxConfig.token;
+        this.map = new mapboxgl.Map({
+            container: 'mapbox-container',
+            style: 'mapbox://styles/mapbox/dark-v11',
+            center: [-85.8885, 42.9699], // GVSU Allendale
+            zoom: 10
+        });
+
+        this.map.on('load', () => {
+            this.renderMapMarkers();
+        });
+    }
+
+    renderMapMarkers() {
+        const markets = crmService.getMarkets();
+        markets.forEach(m => {
+            const el = document.createElement('div');
+            el.className = 'market-marker';
+            el.innerHTML = `<div class="marker-pulse"></div>`;
+
+            new mapboxgl.Marker(el)
+                .setLngLat([m.location.lng, m.location.lat])
+                .setPopup(new mapboxgl.Popup().setHTML(`<h3>${m.name}</h3><p>${m.type}</p>`))
+                .addTo(this.map);
+        });
+    }
+
+    initCognitiveGraph() {
+        const container = document.getElementById('d3-container');
+        container.innerHTML = '';
+        
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const individuals = crmService.getIndividuals();
+        
+        const nodes = individuals.map(ind => ({ id: ind.id, name: ind.name, hotness: ind.hotnessScore }));
+        const links = [];
+        
+        const svg = d3.select("#d3-container").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id))
+            .force("charge", d3.forceManyBody().strength(-200))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        const node = svg.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("r", d => 5 + (d.hotness / 10))
+            .attr("fill", d => d.hotness > 80 ? "#ff6600" : "#00ffcc")
+            .call(d3.drag()
+                .on("start", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x; d.fy = d.y;
+                })
+                .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+                .on("end", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null; d.fy = null;
+                }));
+
+        node.append("title").text(d => d.name);
+
+        simulation.on("tick", () => {
+            node.attr("cx", d => d.x).attr("cy", d => d.y);
+        });
     }
 
     updateSidebarContent() {
         const sidebar = document.getElementById('sidebar-content');
-        if (this.currentView === 'ingestion' || this.currentView === 'crm' || this.currentView === 'geo-map' || this.currentView === 'cognitive-map') {
-            const leads = crmService.getTopLeads();
-            sidebar.innerHTML = `
-                <div class="lead-list">
-                    <h3 class="text-xs uppercase text-secondary mb-4">Top Targets (Hotness)</h3>
-                    ${leads.length === 0 ? '<p class="text-xs text-secondary">No data ingested yet.</p>' : ''}
-                    ${leads.map(l => `
-                        <div class="lead-card ${l.hotnessScore > 80 ? 'hot' : ''}">
-                            <div class="lead-header">
-                                <strong>${l.name}</strong>
-                                <span class="badge">${l.hotnessScore}%</span>
-                            </div>
-                            <p class="text-xs text-secondary">${l.title}</p>
-                            <div class="lead-tags">
-                                ${l.tags.map(t => `<span class="tag">${t}</span>`).join('')}
-                            </div>
+        const leads = crmService.getTopLeads();
+        sidebar.innerHTML = `
+            <div class="lead-list">
+                <h3 class="text-xs uppercase text-secondary mb-4">Priority Intelligence</h3>
+                ${leads.map(l => `
+                    <div class="lead-card ${l.hotnessScore > 80 ? 'hot' : ''}">
+                        <div class="lead-header">
+                            <strong>${l.name}</strong>
+                            <span class="badge">${l.hotnessScore}%</span>
                         </div>
-                    `).join('')}
-                </div>
-            `;
-        }
+                        <p class="text-xs text-secondary">${l.title}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
 
     bindIngestionZone() {
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-upload');
         if(!dropZone) return;
-
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -157,28 +224,18 @@ class App {
 
     async handleFileUpload(file) {
         this.logToConsole(`Parsing file: ${file.name}...`);
-        
         if (file.name.endsWith('.json')) {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const rawData = JSON.parse(e.target.result);
-                    this.logToConsole(`Parsed ${rawData.length} records. Running ANAI Transformation...`);
-                    
                     const transformed = DataTransformationService.transformApifyLinkedIn(rawData);
-                    this.logToConsole(`Transformation complete. Persisting to Cloud Firestore...`);
-                    
                     await crmService.persistIndividuals(transformed);
-                    this.logToConsole(`Success! ${transformed.length} leads prioritized and saved.`);
+                    this.logToConsole(`Success! ${transformed.length} leads persisted.`);
                     this.updateSidebarContent();
-                } catch (err) {
-                    this.logToConsole(`Error processing data: ${err.message}`);
-                    console.error(err);
-                }
+                } catch (err) { this.logToConsole(`Error: ${err.message}`); }
             };
             reader.readAsText(file);
-        } else {
-            this.logToConsole(`Unsupported file type. Please use .json for Apify data.`);
         }
     }
 
