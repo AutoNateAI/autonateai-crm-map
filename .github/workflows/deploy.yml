@@ -24,6 +24,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Inject Mapbox Token
+        run: |
+          mkdir -p src/config
+          echo "export const mapboxConfig = { token: '${{ secrets.MAPBOX_TOKEN }}' };" > src/config/mapbox.js
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
