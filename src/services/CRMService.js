@@ -1,15 +1,15 @@
 import { MarketModel, IndividualModel } from '../models/CRMModels.js';
+import { db } from '../config/firebase.js';
+import { collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 class CRMService {
     constructor() {
         this.markets = [];
         this.individuals = [];
-        this.signals = [];
     }
 
     async loadInitialData() {
-        // Placeholder for future fetch from data/ or API
-        console.log('CRM Service: Loading initial market data...');
+        // Load default markets
         this.markets = [
             MarketModel({
                 id: 'gvsu-cs',
@@ -17,29 +17,35 @@ class CRMService {
                 type: 'university',
                 location: { lat: 42.9699, lng: -85.8885 },
                 courseFocus: ['Data Structures', 'OS', 'ML']
-            }),
-            MarketModel({
-                id: 'uofm-cs',
-                name: 'University of Michigan (CS)',
-                type: 'university',
-                location: { lat: 42.2780, lng: -83.7382 },
-                courseFocus: ['Algorithms', 'AI', 'Distributed Systems']
             })
         ];
+
+        // Fetch individuals from Firestore
+        try {
+            const querySnapshot = await getDocs(collection(db, "individuals"));
+            this.individuals = querySnapshot.docs.map(doc => doc.data());
+            console.log(`CRM Service: Loaded ${this.individuals.length} individuals from Firestore.`);
+        } catch (e) {
+            console.warn("CRM Service: Failed to fetch from Firestore. Check permissions/auth.");
+        }
     }
 
-    getMarkets() {
-        return this.markets;
+    async persistIndividuals(individuals) {
+        for (const ind of individuals) {
+            try {
+                await setDoc(doc(db, "individuals", ind.id), ind);
+            } catch (e) {
+                console.error("Error persisting individual: ", e);
+            }
+        }
+        this.individuals = [...this.individuals, ...individuals];
     }
 
-    getIndividualsByMarket(marketId) {
-        return this.individuals.filter(ind => ind.marketId === marketId);
-    }
-
-    addIndividual(data) {
-        const individual = IndividualModel(data);
-        this.individuals.push(individual);
-        return individual;
+    getMarkets() { return this.markets; }
+    getTopLeads(limit = 10) {
+        return [...this.individuals]
+            .sort((a, b) => b.hotnessScore - a.hotnessScore)
+            .slice(0, limit);
     }
 }
 

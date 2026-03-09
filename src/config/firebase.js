@@ -2,21 +2,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// TODO: Replace with your actual Firebase project configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA280xxb-pJmE_IZfKgxdIRn4stFoXeYM8",
+  authDomain: "marketing-command-center-anai.firebaseapp.com",
+  projectId: "marketing-command-center-anai",
+  storageBucket: "marketing-command-center-anai.firebasestorage.app",
+  messagingSenderId: "557034909885",
+  appId: "1:557034909885:web:5a95c65540513ca749c7d4",
+  measurementId: "G-GJE5LJ22EQ"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
-
-// Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
