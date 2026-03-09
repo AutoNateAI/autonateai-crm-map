@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoNateAI | Market Map CRM</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+    <!-- Mapbox GL JS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
+</head>
+<body class="theme-dark">
+    <div id="app" class="app-layout">
+        <aside id="sidebar" class="sidebar">
+            <header class="sidebar-header">
+                <h1>ANAI CRM</h1>
+                <p class="subtitle">Cognitive-Digital Command Center</p>
+            </header>
+            <nav id="navigation" class="nav-links">
+                <button class="nav-item active" data-view="map">Market Map</button>
+                <button class="nav-item" data-view="individuals">Individuals</button>
+                <button class="nav-item" data-view="signals">Signals</button>
+            </nav>
+            <div id="sidebar-content" class="sidebar-scroll">
+                <!-- Content injected here -->
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <div id="map-container"></div>
+            <div id="modal-container" class="hidden"></div>
+        </main>
+    </div>
+    
+    <script type="module" src="src/app.js"></script>
+</body>
+</html>
