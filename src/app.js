@@ -1,10 +1,17 @@
+import { auth } from './config/firebase.js';
+import { 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { crmService } from './services/CRMService.js';
 import { DataTransformationService } from './services/DataTransformationService.js';
 
 class App {
     constructor() {
         this.currentView = 'geo-map';
-        this.isAuthenticated = false;
+        this.isRegisterMode = false;
         this.init();
     }
 
@@ -12,33 +19,71 @@ class App {
         this.bindAuthEvents();
         this.bindNavigation();
         this.bindIngestionZone();
+        this.monitorAuthState();
+    }
+
+    monitorAuthState() {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                console.log("Auth Status: Authenticated as", user.email);
+                this.onLoginSuccess(user);
+            } else {
+                console.log("Auth Status: Unauthenticated");
+                this.onLogoutSuccess();
+            }
+        });
     }
 
     bindAuthEvents() {
-        document.getElementById('auth-login-btn').addEventListener('click', () => {
-            // Simplified for now - will wire to Firebase Auth properly
-            this.login();
+        const primaryBtn = document.getElementById('auth-primary-btn');
+        const toggleBtn = document.getElementById('auth-toggle-btn');
+        const emailInput = document.getElementById('auth-email');
+        const passInput = document.getElementById('auth-password');
+        const errorDiv = document.getElementById('auth-error');
+
+        primaryBtn.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passInput.value;
+            errorDiv.classList.add('hidden');
+
+            try {
+                if (this.isRegisterMode) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        toggleBtn.addEventListener('click', () => {
+            this.isRegisterMode = !this.isRegisterMode;
+            document.getElementById('auth-title').textContent = this.isRegisterMode ? "Create Account" : "Command Center Access";
+            document.getElementById('auth-subtitle').textContent = this.isRegisterMode ? "Register new operator" : "Authentication Required";
+            primaryBtn.textContent = this.isRegisterMode ? "Register" : "Initialize Session";
+            toggleBtn.textContent = this.isRegisterMode ? "Already have an account? Login" : "Need an account? Register";
         });
 
         document.getElementById('auth-logout-btn').addEventListener('click', () => {
-            this.logout();
+            signOut(auth);
         });
     }
 
-    async login() {
-        this.isAuthenticated = true;
+    async onLoginSuccess(user) {
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
+        document.getElementById('user-display').textContent = `Operator: ${user.email}`;
         
-        // Load data after login
         await crmService.loadInitialData();
         this.renderView();
     }
 
-    logout() {
-        this.isAuthenticated = false;
+    onLogoutSuccess() {
         document.getElementById('app').classList.add('hidden');
         document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('user-display').textContent = "";
     }
 
     bindNavigation() {
@@ -69,11 +114,12 @@ class App {
 
     updateSidebarContent() {
         const sidebar = document.getElementById('sidebar-content');
-        if (this.currentView === 'ingestion' || this.currentView === 'crm') {
+        if (this.currentView === 'ingestion' || this.currentView === 'crm' || this.currentView === 'geo-map' || this.currentView === 'cognitive-map') {
             const leads = crmService.getTopLeads();
             sidebar.innerHTML = `
                 <div class="lead-list">
                     <h3 class="text-xs uppercase text-secondary mb-4">Top Targets (Hotness)</h3>
+                    ${leads.length === 0 ? '<p class="text-xs text-secondary">No data ingested yet.</p>' : ''}
                     ${leads.map(l => `
                         <div class="lead-card ${l.hotnessScore > 80 ? 'hot' : ''}">
                             <div class="lead-header">
@@ -88,14 +134,14 @@ class App {
                     `).join('')}
                 </div>
             `;
-        } else {
-            sidebar.innerHTML = `<div class="p-4 text-secondary text-xs">Ready for Command.</div>`;
         }
     }
 
     bindIngestionZone() {
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-upload');
+        if(!dropZone) return;
+
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -138,6 +184,7 @@ class App {
 
     logToConsole(message) {
         const log = document.getElementById('ingestion-log');
+        if(!log) return;
         const entry = document.createElement('div');
         entry.textContent = `> ${message}`;
         log.appendChild(entry);

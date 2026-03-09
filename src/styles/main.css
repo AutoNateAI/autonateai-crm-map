@@ -75,6 +75,16 @@ body {
 }
 .primary-btn:hover { background: var(--accent-hover); }
 
+.text-link {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.text-link:hover { color: var(--accent); }
+
 .secondary-btn {
     background: transparent;
     color: var(--text-secondary);
@@ -127,6 +137,7 @@ body {
 
 .sidebar-scroll { flex: 1; overflow-y: auto; padding: 16px; }
 .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+.user-info { color: var(--text-secondary); }
 
 /* Lead Cards */
 .lead-list { display: flex; flex-direction: column; gap: 12px; }

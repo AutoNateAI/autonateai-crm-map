@@ -21,11 +21,12 @@
     <!-- Auth Overlay -->
     <div id="auth-screen" class="auth-container">
         <div class="auth-box">
-            <h2>Command Center Access</h2>
-            <p class="subtitle">Authentication Required</p>
+            <h2 id="auth-title">Command Center Access</h2>
+            <p id="auth-subtitle" class="subtitle">Authentication Required</p>
             <input type="email" id="auth-email" placeholder="Email" class="dark-input">
             <input type="password" id="auth-password" placeholder="Password" class="dark-input">
-            <button id="auth-login-btn" class="primary-btn">Initialize Session</button>
+            <button id="auth-primary-btn" class="primary-btn">Initialize Session</button>
+            <button id="auth-toggle-btn" class="text-link">Need an account? Register</button>
             <div id="auth-error" class="error-text hidden"></div>
         </div>
     </div>
@@ -47,6 +48,7 @@
                 <!-- Content injected here -->
             </div>
             <div class="sidebar-footer">
+                <div id="user-display" class="user-info text-xs mb-4"></div>
                 <button id="auth-logout-btn" class="secondary-btn">Terminate Session</button>
             </div>
         </aside>
@@ -75,7 +77,7 @@
             <div id="view-crm" class="view-container hidden">
                 <div class="p-4">
                     <h2>CRM Console</h2>
-                    <!-- Standard CRM lists go here -->
+                    <div id="crm-content"></div>
                 </div>
             </div>
         </main>
