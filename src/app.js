@@ -7,13 +7,22 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { crmService } from './services/CRMService.js';
 import { DataTransformationService } from './services/DataTransformationService.js';
-import { mapboxConfig } from './config/mapbox.js';
+
+// Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
+let mapboxConfig = { token: '' };
+try {
+    const config = await import('./config/mapbox.js');
+    mapboxConfig = config.mapboxConfig;
+} catch (e) {
+    console.warn("Mapbox config not found. Map will not load until token is provided.");
+}
 
 class App {
     constructor() {
         this.currentView = 'geo-map';
         this.isRegisterMode = false;
         this.map = null;
+        console.log("App: Initializing...");
         this.init();
     }
 
@@ -27,8 +36,10 @@ class App {
     monitorAuthState() {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                console.log("App: User authenticated", user.email);
                 this.onLoginSuccess(user);
             } else {
+                console.log("App: User not authenticated");
                 this.onLogoutSuccess();
             }
         });
@@ -44,7 +55,12 @@ class App {
         primaryBtn.addEventListener('click', async () => {
             const email = emailInput.value;
             const password = passInput.value;
+            console.log("App: Login attempt for", email);
+            
             errorDiv.classList.add('hidden');
+            primaryBtn.textContent = "Processing...";
+            primaryBtn.disabled = true;
+
             try {
                 if (this.isRegisterMode) {
                     await createUserWithEmailAndPassword(auth, email, password);
@@ -52,8 +68,11 @@ class App {
                     await signInWithEmailAndPassword(auth, email, password);
                 }
             } catch (error) {
+                console.error("App: Auth error", error);
                 errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
+                primaryBtn.textContent = this.isRegisterMode ? "Register" : "Initialize Session";
+                primaryBtn.disabled = false;
             }
         });
 
@@ -74,13 +93,19 @@ class App {
         document.getElementById('app').classList.remove('hidden');
         document.getElementById('user-display').textContent = `Operator: ${user.email}`;
         
-        await crmService.loadInitialData();
-        this.renderView();
+        try {
+            await crmService.loadInitialData();
+            this.renderView();
+        } catch (e) {
+            console.error("App: Error loading initial data", e);
+        }
     }
 
     onLogoutSuccess() {
         document.getElementById('app').classList.add('hidden');
         document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('auth-primary-btn').disabled = false;
+        document.getElementById('auth-primary-btn').textContent = "Initialize Session";
     }
 
     bindNavigation() {
@@ -95,6 +120,7 @@ class App {
     }
 
     renderView() {
+        console.log("App: Rendering view", this.currentView);
         document.querySelectorAll('.view-container').forEach(view => {
             view.classList.remove('active');
             view.classList.add('hidden');
@@ -113,17 +139,22 @@ class App {
     }
 
     initMap() {
-        if (this.map) return;
+        if (this.map || !mapboxConfig.token) {
+            if (!mapboxConfig.token) console.warn("App: Mapbox token missing.");
+            return;
+        }
         
+        console.log("App: Initializing Mapbox...");
         mapboxgl.accessToken = mapboxConfig.token;
         this.map = new mapboxgl.Map({
             container: 'mapbox-container',
             style: 'mapbox://styles/mapbox/dark-v11',
-            center: [-85.8885, 42.9699], // GVSU Allendale
+            center: [-85.8885, 42.9699],
             zoom: 10
         });
 
         this.map.on('load', () => {
+            console.log("App: Mapbox loaded.");
             this.renderMapMarkers();
         });
     }
@@ -143,7 +174,9 @@ class App {
     }
 
     initCognitiveGraph() {
+        console.log("App: Initializing Cognitive Graph...");
         const container = document.getElementById('d3-container');
+        if (!container) return;
         container.innerHTML = '';
         
         const width = container.clientWidth;
