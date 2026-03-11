@@ -7,6 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { crmService } from './services/CRMService.js';
 import { DataTransformationService } from './services/DataTransformationService.js';
+import { IntelligencePanel } from './components/IntelligencePanel.js';
 
 // Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
 let mapboxConfig = { token: '' };
@@ -179,8 +180,22 @@ class App {
 
         if (this.currentView === 'geo-map') this.initMap();
         if (this.currentView === 'cognitive-map') this.initCognitiveGraph();
+        if (this.currentView === 'intelligence') this.initIntelligenceView();
         
         this.updateSidebarContent();
+    }
+
+    initIntelligenceView() {
+        console.log("DEBUG: Initializing Intelligence View...");
+        const container = document.getElementById('intelligence-content');
+        if (!container) return;
+
+        const data = {
+            organizations: crmService.organizations,
+            departments: crmService.departments
+        };
+        
+        IntelligencePanel.render(container, data);
     }
 
     initMap() {
@@ -334,10 +349,13 @@ const startApp = () => {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+        window.crmService = crmService;
         console.log("DEBUG: DOMContentLoaded fired.");
         startApp();
     });
+
 } else {
+    window.crmService = crmService;
     console.log("DEBUG: DOM already ready. Starting App immediately.");
     startApp();
 }

@@ -1,13 +1,31 @@
 /**
- * @typedef {Object} Market
+ * @typedef {Object} Organization
  * @property {string} id
  * @property {string} name
- * @property {'university' | 'company' | 'community'} type
+ * @property {string} websiteUrl
+ * @property {string} missionVibe - LLM distilled core mission/values
+ * @property {string[]} culturalSignals - Key institutional markers
  * @property {Object} location
  * @property {number} location.lat
  * @property {number} location.lng
- * @property {string} [description]
- * @property {string[]} [courseFocus]
+ */
+
+/**
+ * @typedef {Object} Department
+ * @property {string} id
+ * @property {string} orgId
+ * @property {string} name
+ * @property {string[]} curriculumMap - Active course topics (Data Structures, OS, ML)
+ * @property {string[]} techStackFocus - Tools and technologies emphasized
+ * @property {Object[]} events - Upcoming academic/career events
+ */
+
+/**
+ * @typedef {Object} PsychographicProfile
+ * @property {string} personaType - e.g., 'The LeetCode Grinder', 'Startup Hacker'
+ * @property {number} cognitiveLoadEstimate - Scale 0-100 based on current events
+ * @property {number} contextWindowSize - Mental capacity/focus area estimate
+ * @property {string[]} activeInterests - Currently engaged technical topics
  */
 
 /**
@@ -15,67 +33,58 @@
  * @property {string} id
  * @property {string} name
  * @property {string} marketId
+ * @property {string} departmentId
  * @property {string} linkedinUrl
  * @property {string} [title]
  * @property {string[]} tags
- * @property {number} hotnessScore - Probability of purchasing the workshop (0-100)
- * @property {number} psychologicalDistance - Graph weight representing relational closeness
- * @property {Object} schedule - Known availability/class times
- * @property {string} [lastInteraction]
- */
-
-/**
- * @typedef {Object} Signal
- * @property {string} id
- * @property {string} individualId
- * @property {string} type - e.g., 'comment', 'message', 'like', 'post_analyzed'
- * @property {string} timestamp
- * @property {string} content
- * @property {Object} extractedData - NLP parsed entities, pain points
- */
-
-/**
- * @typedef {Object} Event
- * @property {string} id
- * @property {string} marketId
- * @property {string} title
- * @property {'class' | 'exam' | 'club_meeting' | 'university_wide'} type
- * @property {string} startTime
- * @property {string} endTime
- * @property {string} [description]
- */
-
-/**
- * @typedef {Object} Strategy
- * @property {string} id
- * @property {string} targetMarketId
- * @property {string} title
- * @property {string} description
- * @property {string[]} bridgeNodeIds - Individuals used to enter the new market
- * @property {Object} executionTimeline
- * @property {'draft' | 'active' | 'completed'} status
+ * @property {number} hotnessScore - Probability of purchasing (0-100)
+ * @property {number} psychologicalDistance - Relational weight (0-100)
+ * @property {PsychographicProfile} [psychographic]
  */
 
 export const MarketModel = (data) => ({
     id: data.id || crypto.randomUUID(),
     name: data.name || '',
-    type: data.type || 'community',
+    type: data.type || 'university',
     location: { lat: data.location?.lat || 0, lng: data.location?.lng || 0 },
     description: data.description || '',
     courseFocus: data.courseFocus || []
+});
+
+export const OrganizationModel = (data) => ({
+    id: data.id || crypto.randomUUID(),
+    name: data.name || '',
+    websiteUrl: data.websiteUrl || '',
+    missionVibe: data.missionVibe || '',
+    culturalSignals: data.culturalSignals || [],
+    location: { lat: data.location?.lat || 0, lng: data.location?.lng || 0 }
+});
+
+export const DepartmentModel = (data) => ({
+    id: data.id || crypto.randomUUID(),
+    orgId: data.orgId || '',
+    name: data.name || '',
+    curriculumMap: data.curriculumMap || [],
+    techStackFocus: data.techStackFocus || [],
+    events: data.events || []
 });
 
 export const IndividualModel = (data) => ({
     id: data.id || crypto.randomUUID(),
     name: data.name || '',
     marketId: data.marketId || '',
+    departmentId: data.departmentId || '',
     linkedinUrl: data.linkedinUrl || '',
     title: data.title || '',
     tags: data.tags || [],
     hotnessScore: data.hotnessScore || 0,
-    psychologicalDistance: data.psychologicalDistance || 100, // 100 = completely cold, 0 = highly trusted
-    schedule: data.schedule || {},
-    lastInteraction: data.lastInteraction || null
+    psychologicalDistance: data.psychologicalDistance || 100,
+    psychographic: data.psychographic || {
+        personaType: 'unknown',
+        cognitiveLoadEstimate: 50,
+        contextWindowSize: 50,
+        activeInterests: []
+    }
 });
 
 export const EventModel = (data) => ({

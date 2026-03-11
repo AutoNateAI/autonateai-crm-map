@@ -41,6 +41,7 @@
             <nav id="navigation" class="nav-links">
                 <button class="nav-item active" data-view="geo-map">Geo Map</button>
                 <button class="nav-item" data-view="cognitive-map">Cognitive Graph</button>
+                <button class="nav-item" data-view="intelligence">Intelligence</button>
                 <button class="nav-item" data-view="ingestion">Data Ingestion</button>
                 <button class="nav-item" data-view="crm">Standard CRM</button>
             </nav>
@@ -60,6 +61,15 @@
             
             <div id="view-cognitive-map" class="view-container hidden">
                 <div id="d3-container"></div>
+            </div>
+
+            <div id="view-intelligence" class="view-container hidden">
+                <div class="p-8">
+                    <h2 class="text-xl mb-4">Geo-Cognitive Intelligence</h2>
+                    <div id="intelligence-content" class="grid-layout">
+                        <!-- Intelligence components injected here -->
+                    </div>
+                </div>
             </div>
             
             <div id="view-ingestion" class="view-container hidden">
