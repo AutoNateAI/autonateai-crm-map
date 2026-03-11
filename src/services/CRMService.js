@@ -8,27 +8,36 @@ class CRMService {
         this.individuals = [];
         this.organizations = [];
         this.departments = [];
+        this.courses = [];
+        this.topics = [];
+        this.contents = [];
     }
 
     async loadInitialData() {
         console.log("DEBUG: CRMService.loadInitialData started...");
         
         try {
-            console.log("DEBUG: Fetching Organizations, Departments, and Individuals...");
+            console.log("DEBUG: Fetching full intelligence graph...");
             
-            const [orgSnap, deptSnap, indSnap] = await Promise.all([
+            const [orgSnap, deptSnap, indSnap, courseSnap, topicSnap, contentSnap] = await Promise.all([
                 getDocs(collection(db, "organizations")),
                 getDocs(collection(db, "departments")),
-                getDocs(collection(db, "individuals"))
+                getDocs(collection(db, "individuals")),
+                getDocs(collection(db, "courses")),
+                getDocs(collection(db, "topics")),
+                getDocs(collection(db, "content"))
             ]);
 
             this.organizations = orgSnap.docs.map(doc => doc.data());
             this.departments = deptSnap.docs.map(doc => doc.data());
             this.individuals = indSnap.docs.map(doc => doc.data());
+            this.courses = courseSnap.docs.map(doc => doc.data());
+            this.topics = topicSnap.docs.map(doc => doc.data());
+            this.contents = contentSnap.docs.map(doc => doc.data());
 
-            console.log(`DEBUG: Loaded ${this.organizations.length} Orgs, ${this.departments.length} Depts, ${this.individuals.length} Individuals.`);
+            console.log(`DEBUG: Loaded Intelligence Graph: ${this.organizations.length} Orgs, ${this.courses.length} Courses, ${this.topics.length} Topics.`);
             
-            // Default Market for Map (Legacy compatibility or Base Node)
+            // Default Market for Map
             this.markets = this.organizations.map(org => MarketModel({
                 id: org.id,
                 name: org.name,
@@ -39,6 +48,15 @@ class CRMService {
         } catch (e) {
             console.warn("DEBUG: WARNING Firestore access issue in loadInitialData:", e);
         }
+    }
+
+    getAnalyticsData() {
+        return {
+            organizations: this.organizations,
+            courses: this.courses,
+            topics: this.topics,
+            content: this.contents
+        };
     }
 
     async persistOrganization(org) {

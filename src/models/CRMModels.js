@@ -57,7 +57,40 @@ export const OrganizationModel = (data) => ({
     websiteUrl: data.websiteUrl || '',
     missionVibe: data.missionVibe || '',
     culturalSignals: data.culturalSignals || [],
-    location: { lat: data.location?.lat || 0, lng: data.location?.lng || 0 }
+    location: { lat: data.location?.lat || 0, lng: data.location?.lng || 0 },
+    enrollment: data.enrollment || 0, // CS Student count
+    analytics: data.analytics || {
+        difficultyIndex: 0,
+        contentOpportunities: 0
+    }
+});
+
+export const CourseModel = (data) => ({
+    id: data.id || crypto.randomUUID(),
+    orgId: data.orgId || '',
+    deptId: data.deptId || '',
+    name: data.name || '',
+    code: data.code || '', // e.g., EECS 281
+    textbook: data.textbook || '',
+    syllabus: data.syllabus || [], // Array of { week: 1, topicId: 'recursion' }
+});
+
+export const TopicModel = (data) => ({
+    id: data.id || '', // e.g. 'dynamic-programming'
+    name: data.name || '',
+    difficultyScore: data.difficultyScore || 0, // 0-100
+    dependencies: data.dependencies || [], // IDs of prerequisite topics
+    keywords: data.keywords || [], // YouTube/Search keywords
+    searchVolume: data.searchVolume || 0 // From Keywords Everywhere
+});
+
+export const ContentModel = (data) => ({
+    id: data.id || crypto.randomUUID(),
+    topicId: data.topicId || '',
+    title: data.title || '',
+    platform: data.platform || 'linkedin', // 'linkedin', 'youtube', 'library'
+    url: data.url || '',
+    status: data.status || 'published'
 });
 
 export const DepartmentModel = (data) => ({

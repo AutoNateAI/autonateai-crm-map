@@ -8,6 +8,8 @@ import {
 import { crmService } from './services/CRMService.js';
 import { DataTransformationService } from './services/DataTransformationService.js';
 import { intelPanel } from './components/IntelligencePanel.js';
+import { analyticsPanel } from './components/AnalyticsPanel.js';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard.js';
 
 // Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
 let mapboxConfig = { token: '' };
@@ -181,8 +183,27 @@ class App {
         if (this.currentView === 'geo-map') this.initMap();
         if (this.currentView === 'cognitive-map') this.initCognitiveGraph();
         if (this.currentView === 'intelligence') this.initIntelligenceView();
+        if (this.currentView === 'analytics') this.initAnalyticsView();
         
         this.updateSidebarContent();
+    }
+
+    initAnalyticsView() {
+        console.log("DEBUG: Initializing Analytics Carousel View...");
+        const track = document.getElementById('analytics-track');
+        const searchInput = document.getElementById('analytics-search');
+        if (!track) return;
+
+        const data = crmService.getAnalyticsData();
+        analyticsPanel.render(track, data);
+
+        // Bind Search
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                // For now, filtering specific topics within the cards
+                console.log("DEBUG: Analytics Search:", e.target.value);
+            });
+        }
     }
 
     initIntelligenceView() {
