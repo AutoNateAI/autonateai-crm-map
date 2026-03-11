@@ -1,17 +1,17 @@
+console.log("DEBUG: IntelligencePanel component script loading...");
+
 export class IntelligencePanel {
     constructor() {
         this.currentIndex = 0;
         this.startX = 0;
         this.isDragging = false;
+        this.wasMoved = false;
         this.data = { organizations: [], departments: [] };
+        this.onSelect = null;
     }
 
-    /**
-     * Renders the intelligence carousel with swipe and search support
-     * @param {HTMLElement} track 
-     * @param {Object} data 
-     */
     render(track, data) {
+        console.log("DEBUG: IntelligencePanel.render firing...");
         this.track = track;
         this.data = data;
         const { organizations, departments } = data;
@@ -24,7 +24,10 @@ export class IntelligencePanel {
         track.innerHTML = organizations.map((org, index) => {
             const orgDepts = departments.filter(d => d.orgId === org.id);
             return `
-                <div class="intel-card ${index === this.currentIndex ? 'active' : ''}" data-index="${index}">
+                <div class="intel-card ${index === this.currentIndex ? 'active' : ''}" 
+                     data-index="${index}" 
+                     data-id="${org.id}" 
+                     style="cursor: pointer;">
                     <header class="intel-header p-8">
                         <span class="node-label">Organization Node</span>
                         <h3 class="text-2xl text-accent mb-1">${org.name}</h3>
@@ -69,48 +72,67 @@ export class IntelligencePanel {
         }).join('');
 
         this.initGestures();
+        this.bindClicks();
         this.updateCarousel();
+    }
+
+    bindClicks() {
+        const cards = this.track.querySelectorAll('.intel-card');
+        console.log(`DEBUG: IntelligencePanel.bindClicks binding ${cards.length} cards.`);
+        cards.forEach(card => {
+            // Using pointerup to be safer across devices
+            card.onpointerup = (e) => {
+                console.log(`DEBUG: Card pointerup. wasMoved: ${this.wasMoved}`);
+                if (this.wasMoved) return;
+                
+                const id = card.dataset.id;
+                const org = this.data.organizations.find(o => o.id === id);
+                console.log(`DEBUG: Selected Org ID: ${id} -> ${org?.name}`);
+                if (this.onSelect && org) this.onSelect(org);
+            };
+        });
     }
 
     initGestures() {
         const container = document.getElementById('intelligence-carousel');
         if (!container) return;
 
-        // Clear existing to avoid double binding
-        container.onmousedown = container.ontouchstart = (e) => this.handleStart(e);
-        container.onmousemove = container.ontouchmove = (e) => this.handleMove(e);
-        container.onmouseup = container.onmouseleave = container.ontouchend = () => this.handleEnd();
+        // Ensure we are using pointer events for broader support
+        container.onpointerdown = (e) => {
+            this.isDragging = true;
+            this.wasMoved = false;
+            this.startX = e.clientX;
+            console.log("DEBUG: Gesture Start");
+        };
 
-        // Keyboard/Trackpad Support
+        container.onpointermove = (e) => {
+            if (!this.isDragging) return;
+            const currentX = e.clientX;
+            const diff = currentX - this.startX;
+            
+            // If mouse moved more than 5px, it's a drag
+            if (Math.abs(diff) > 5) {
+                this.wasMoved = true;
+            }
+
+            if (Math.abs(diff) > 60) {
+                if (diff > 0) this.prev(); else this.next();
+                this.isDragging = false;
+            }
+        };
+
+        container.onpointerup = container.onpointerleave = container.onpointercancel = () => {
+            this.isDragging = false;
+            console.log("DEBUG: Gesture End");
+        };
+
         window.onkeydown = (e) => {
-            if (document.activeElement.tagName === 'INPUT') return; // Don't swipe while searching
+            if (document.activeElement.tagName === 'INPUT') return;
             if (e.key === 'ArrowRight') this.next();
             if (e.key === 'ArrowLeft') this.prev();
         };
 
-        // Real-time Resize/Zoom Response
-        window.addEventListener('resize', () => {
-            this.updateCarousel();
-        });
-    }
-
-    handleStart(e) {
-        this.isDragging = true;
-        this.startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-    }
-
-    handleMove(e) {
-        if (!this.isDragging) return;
-        const currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        const diff = currentX - this.startX;
-        if (Math.abs(diff) > 50) {
-            if (diff > 0) this.prev(); else this.next();
-            this.isDragging = false;
-        }
-    }
-
-    handleEnd() {
-        this.isDragging = false;
+        window.addEventListener('resize', () => this.updateCarousel());
     }
 
     next() {
@@ -128,51 +150,36 @@ export class IntelligencePanel {
     }
 
     updateCarousel() {
-        const cards = this.track.querySelectorAll('.intel-card');
+        const container = document.getElementById('intelligence-carousel');
+        if (!container) return;
+        const track = container.querySelector('.intel-carousel-track');
+        const cards = track.querySelectorAll('.intel-card');
         if (cards.length === 0) return;
 
         cards.forEach((card, idx) => {
             card.classList.toggle('active', idx === this.currentIndex);
         });
 
-        // PERFECT FLEX CENTERING:
-        const container = document.getElementById('intelligence-carousel');
         const containerWidth = container.offsetWidth;
         const activeCard = cards[this.currentIndex];
-        
-        // Offset is (Container Center) - (Active Card Relative Center)
-        // OffsetParent of the card is the track.
-        const cardRelativeLeft = activeCard.offsetLeft;
-        const cardWidth = activeCard.offsetWidth;
-        const cardRelativeCenter = cardRelativeLeft + (cardWidth / 2);
-        
+        const cardRelativeCenter = activeCard.offsetLeft + (activeCard.offsetWidth / 2);
         const finalTranslate = (containerWidth / 2) - cardRelativeCenter;
 
-        console.log(`DEBUG: Carousel [i=${this.currentIndex}] Centering: Container ${containerWidth}, CardMid ${cardRelativeCenter} -> Translate ${finalTranslate}px`);
-
         anime({
-            targets: this.track,
+            targets: track,
             translateX: finalTranslate,
             duration: 800,
             easing: 'spring(1, 80, 15, 0)'
         });
     }
 
-    /**
-     * Filters the intelligence view based on search query
-     * @param {string} query 
-     */
     filter(query) {
         const filteredOrgs = this.data.organizations.filter(org => 
             org.name.toLowerCase().includes(query.toLowerCase()) ||
             org.missionVibe.toLowerCase().includes(query.toLowerCase())
         );
-        
-        // Temporarily override data for filtered render
-        const originalData = this.data;
         this.currentIndex = 0;
         this.render(this.track, { ...this.data, organizations: filteredOrgs });
-        this.data = originalData; // Restore original for next filter
     }
 }
 

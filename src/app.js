@@ -10,6 +10,7 @@ import { DataTransformationService } from './services/DataTransformationService.
 import { intelPanel } from './components/IntelligencePanel.js';
 import { analyticsPanel } from './components/AnalyticsPanel.js';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard.js';
+import { UniversityDetail } from './components/UniversityDetail.js';
 
 // Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
 let mapboxConfig = { token: '' };
@@ -184,6 +185,7 @@ class App {
         if (this.currentView === 'cognitive-map') this.initCognitiveGraph();
         if (this.currentView === 'intelligence') this.initIntelligenceView();
         if (this.currentView === 'analytics') this.initAnalyticsView();
+        if (this.currentView === 'university-detail') this.initUniversityDetail();
         
         this.updateSidebarContent();
     }
@@ -219,12 +221,34 @@ class App {
         
         intelPanel.render(track, data);
 
+        // Handle Card Selection
+        intelPanel.onSelect = (org) => {
+            console.log("DEBUG: Navigating to detail for", org.name);
+            this.selectedOrg = org;
+            this.currentView = 'university-detail';
+            this.renderView();
+        };
+
         // Bind Search
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 intelPanel.filter(e.target.value);
             });
         }
+    }
+
+    initUniversityDetail() {
+        const container = document.getElementById('university-detail-content');
+        const backBtn = document.getElementById('back-to-universities');
+        
+        if (!container || !this.selectedOrg) return;
+
+        UniversityDetail.render(container, this.selectedOrg, crmService.departments);
+
+        backBtn.onclick = () => {
+            this.currentView = 'intelligence';
+            this.renderView();
+        };
     }
 
     initMap() {
