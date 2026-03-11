@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { crmService } from './services/CRMService.js';
 import { DataTransformationService } from './services/DataTransformationService.js';
-import { IntelligencePanel } from './components/IntelligencePanel.js';
+import { intelPanel } from './components/IntelligencePanel.js';
 
 // Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
 let mapboxConfig = { token: '' };
@@ -186,16 +186,24 @@ class App {
     }
 
     initIntelligenceView() {
-        console.log("DEBUG: Initializing Intelligence View...");
-        const container = document.getElementById('intelligence-content');
-        if (!container) return;
+        console.log("DEBUG: Initializing Intelligence Carousel View...");
+        const track = document.getElementById('intelligence-track');
+        const searchInput = document.getElementById('intel-search');
+        if (!track) return;
 
         const data = {
             organizations: crmService.organizations,
             departments: crmService.departments
         };
         
-        IntelligencePanel.render(container, data);
+        intelPanel.render(track, data);
+
+        // Bind Search
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                intelPanel.filter(e.target.value);
+            });
+        }
     }
 
     initMap() {
@@ -285,10 +293,15 @@ class App {
                         'background-color': '#24242e',
                         'border-width': 1,
                         'border-color': '#00ffcc',
+                        'width': 40,
+                        'height': 40
+                    }
+                },
+                {
+                    selector: 'node[type="individual"]',
+                    style: {
                         'width': 'mapData(hotness, 0, 100, 20, 60)',
-                        'height': 'mapData(hotness, 0, 100, 20, 60)',
-                        'transition-property': 'background-color, line-color, target-arrow-color',
-                        'transition-duration': '0.5s'
+                        'height': 'mapData(hotness, 0, 100, 20, 60)'
                     }
                 },
                 {
