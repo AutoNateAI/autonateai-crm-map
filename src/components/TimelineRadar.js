@@ -1,93 +1,168 @@
 export class TimelineRadar {
     static render(container, data) {
-        console.log("DEBUG: TimelineRadar.render called with data:", data);
+        console.log("DEBUG: TimelineRadar.render starting. Courses:", data?.courses?.length);
         if (!container) return;
         const { courses, topics } = data;
 
         if (!courses || courses.length === 0) {
-            console.warn("DEBUG: No courses found for timeline.");
-            container.innerHTML = `<p class="text-secondary p-8">No curriculum data found. Run the Analytics Seed script.</p>`;
+            container.innerHTML = `<div class="p-5 text-secondary text-center">No intelligence data found. Seed the graph.</div>`;
             return;
         }
 
         const weeks = Array.from({ length: 14 }, (_, i) => i + 1);
-        console.log(`DEBUG: Rendering timeline for ${courses.length} courses...`);
-
+        const path = this.generateWavePath(courses, topics);
+        
         container.innerHTML = `
-            <div class="timeline-radar-container bg-black/20 rounded-[40px] border border-white/5 p-10 overflow-x-auto">
-                <div class="timeline-grid min-w-[1200px]">
-                    <!-- HEADER: Weeks -->
-                    <div class="timeline-row header-row flex mb-8">
-                        <div class="course-label-space w-[250px] flex-shrink-0"></div>
-                        <div class="weeks-container flex flex-1 justify-between">
-                            ${weeks.map(w => `
-                                <div class="week-node text-center w-full">
-                                    <div class="text-[10px] uppercase tracking-widest text-secondary mb-2">Week</div>
-                                    <div class="text-lg font-black ${w === 7 || w === 8 || w === 14 ? 'text-accent' : 'text-white/40'}">${w}</div>
-                                    ${w === 7 || w === 8 ? '<div class="text-[8px] text-accent font-black mt-1">MIDTERMS</div>' : ''}
-                                    ${w === 14 ? '<div class="text-[8px] text-accent font-black mt-1">FINALS</div>' : ''}
-                                </div>
-                            `).join('')}
+            <div class="dashboard-layout fade-in">
+                <!-- 1. THE DEMAND WAVEFORM (The Weather Radar) -->
+                <section class="waveform-portal mb-12 relative overflow-hidden rounded-[50px] bg-black/40 border border-white/5 p-12">
+                    <div class="portal-header mb-8 flex justify-between items-center">
+                        <div>
+                            <span class="node-label">Demand Waveform</span>
+                            <h2 class="text-4xl font-black text-white mt-2">Aggregate Learning Friction</h2>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] uppercase tracking-widest text-secondary">Global Sync Status</div>
+                            <div class="flex items-center gap-2 text-accent font-bold">
+                                <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                                OPTIMAL PRODUCTION WINDOW
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ROWS: Courses -->
-                    <div class="course-rows space-y-6">
-                        ${courses.map(course => `
-                            <div class="timeline-row flex items-center group">
-                                <div class="course-info-box w-[250px] flex-shrink-0 pr-8">
-                                    <div class="text-xs text-accent font-black mb-1">${course.code}</div>
-                                    <div class="text-sm font-bold text-white truncate">${course.name}</div>
-                                    <div class="text-[10px] text-secondary opacity-40 uppercase tracking-tighter">University Node ${course.orgId}</div>
-                                </div>
-                                <div class="course-track flex flex-1 justify-between relative py-4 bg-white/[0.02] rounded-2xl border border-white/5 group-hover:bg-white/[0.04] transition-all">
-                                    ${weeks.map(w => {
-                                        const weekTopic = course.syllabus.find(s => s.week === w);
-                                        const topic = weekTopic ? topics.find(t => t.id === weekTopic.topicId) : null;
-                                        
-                                        return `
-                                            <div class="week-slot w-full flex justify-center items-center relative h-12">
-                                                ${topic ? `
-                                                    <div class="topic-dot group/topic relative cursor-help">
-                                                        <div class="w-3 h-3 rounded-full bg-accent shadow-[0_0_15px_rgba(0,255,204,0.5)] transition-transform group-hover/topic:scale-150"></div>
-                                                        <div class="topic-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-48 bg-white/10 backdrop-blur-xl p-3 rounded-xl border border-white/10 opacity-0 invisible group-hover/topic:opacity-100 group-hover/topic:visible transition-all z-50">
-                                                            <div class="text-[10px] uppercase text-accent font-black mb-1">${topic.name}</div>
-                                                            <div class="text-[9px] text-white/80 leading-tight">High Friction Node. Difficulty: ${topic.difficultyScore}%</div>
-                                                        </div>
-                                                    </div>
-                                                ` : '<div class="w-1 h-1 rounded-full bg-white/10"></div>'}
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
+                    <!-- SVG Waveform Container -->
+                    <div class="waveform-container h-[300px] w-full relative">
+                        <svg id="demand-wave" class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1400 300">
+                            <!-- Background Grid -->
+                            <g stroke="rgba(255,255,255,0.03)" stroke-width="1">
+                                ${weeks.map(w => `<line x1="${w * 100}" y1="0" x2="${w * 100}" y2="300" />`).join('')}
+                            </g>
+                            
+                            <!-- The Main Wave (Demand Volume) -->
+                            <path id="wave-path" d="${path}" fill="url(#wave-gradient)" stroke="var(--accent)" stroke-width="3" opacity="0.8" />
+                            
+                            <!-- Gradients -->
+                            <defs>
+                                <linearGradient id="wave-gradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3" />
+                                    <stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+
+                            <!-- Cognitive Spike Nodes -->
+                            ${this.renderSpikeNodes(courses, topics)}
+                        </svg>
+                    </div>
+
+                    <!-- Week Timeline Footer -->
+                    <div class="flex justify-between mt-8 px-4 border-t border-white/5 pt-6">
+                        ${weeks.map(w => `
+                            <div class="text-center w-full">
+                                <span class="text-[10px] font-black ${w === 7 || w === 8 || w === 14 ? 'text-accent' : 'text-secondary/40'}">W${w}</span>
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <!-- ANALYTICAL OVERLAY: The Demand Waveform -->
-            <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="intel-card p-8">
-                    <h3 class="text-xs uppercase tracking-widest text-accent mb-4 font-black">Upcoming Spikes</h3>
-                    <p class="text-sm text-secondary leading-relaxed">
-                        Significant cognitive earthquakes detected in <span class="text-white font-bold">Week 7 (Dynamic Programming)</span> across 12 target university nodes.
-                    </p>
-                </div>
-                <div class="intel-card p-8">
-                    <h3 class="text-xs uppercase tracking-widest text-secondary mb-4 font-black">Content Sync Window</h3>
-                    <p class="text-sm text-secondary leading-relaxed">
-                        Optimal Remotion production window: <span class="text-white font-bold">Week 5-6</span>. LinkedIn teaser drops scheduled for Monday AM.
-                    </p>
-                </div>
-                <div class="intel-card p-8 border-accent/20">
-                    <h3 class="text-xs uppercase tracking-widest text-accent mb-4 font-black">Live Pulse</h3>
-                    <div class="flex items-center gap-3">
-                        <span class="w-3 h-3 rounded-full bg-accent animate-pulse"></span>
-                        <span class="text-sm font-bold">System Synchronized to Academic Clock</span>
-                    </div>
+                <!-- 2. PORTAL HUB (Access to other zones) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    ${this.renderPortalCard('geo-map', 'Geospatial Radar', 'Mapbox Intelligence Hub', 'Explore University Nodes')}
+                    ${this.renderPortalCard('intelligence', 'Universities', 'Meso-Node Analysis', 'Deep-dive into departments')}
+                    ${this.renderPortalCard('analytics', 'Metrics Lab', 'Heuristic Insights', 'Calculate content leverage')}
                 </div>
             </div>
         `;
+
+        this.animate();
+        this.bindPortalClicks();
+    }
+
+    static generateWavePath(courses, topics) {
+        const points = Array.from({ length: 15 }, (_, w) => {
+            let friction = 0;
+            courses.forEach(c => {
+                const weekTopic = c.syllabus.find(s => s.week === w);
+                if (weekTopic) {
+                    const topic = topics.find(t => t.id === weekTopic.topicId);
+                    if (topic) friction += (topic.difficultyScore * (topic.searchVolume / 10000));
+                }
+            });
+            const y = 280 - Math.min(friction * 2, 250);
+            return `${w * 100},${y}`;
+        });
+
+        return `M 0,300 L ${points.join(' L ')} L 1400,300 Z`;
+    }
+
+    static renderSpikeNodes(courses, topics) {
+        let nodes = '';
+        const weeks = Array.from({ length: 15 }, (_, i) => i);
+        
+        weeks.forEach(w => {
+            let topTopic = null;
+            let maxDiff = 0;
+            courses.forEach(c => {
+                const wt = c.syllabus.find(s => s.week === w);
+                if (wt) {
+                    const topic = topics.find(t => t.id === wt.topicId);
+                    if (topic && topic.difficultyScore > maxDiff) {
+                        maxDiff = topic.difficultyScore;
+                        topTopic = topic;
+                    }
+                }
+            });
+
+            if (topTopic && maxDiff > 70) {
+                const y = 280 - Math.min(maxDiff * 2, 250);
+                nodes += `
+                    <circle cx="${w * 100}" cy="${y}" r="6" fill="var(--accent)" class="spike-node">
+                        <animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                `;
+            }
+        });
+        return nodes;
+    }
+
+    static renderPortalCard(view, title, subtitle, desc) {
+        return `
+            <div class="asset-link-card portal-trigger cursor-pointer group" data-target="${view}">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="text-[10px] uppercase font-black text-accent tracking-widest mb-1">${subtitle}</div>
+                        <h3 class="text-xl font-bold text-white group-hover:text-accent transition-colors">${title}</h3>
+                    </div>
+                    <span class="text-xl opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
+                </div>
+                <p class="text-xs text-secondary leading-relaxed opacity-60">${desc}</p>
+            </div>
+        `;
+    }
+
+    static animate() {
+        anime({
+            targets: '#wave-path',
+            strokeDashoffset: [anime.setDashoffset, 0],
+            easing: 'easeInOutSine',
+            duration: 2000,
+            delay: 500
+        });
+
+        anime({
+            targets: '.portal-trigger',
+            opacity: [0, 1],
+            translateY: [20, 0],
+            delay: anime.stagger(150),
+            easing: 'easeOutExpo'
+        });
+    }
+
+    static bindPortalClicks() {
+        document.querySelectorAll('.portal-trigger').forEach(card => {
+            card.onclick = () => {
+                const target = card.dataset.target;
+                window.dispatchEvent(new CustomEvent('portal-nav', { detail: target }));
+            };
+        });
     }
 }

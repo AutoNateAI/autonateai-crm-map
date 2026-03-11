@@ -1,4 +1,4 @@
-import { MarketModel, IndividualModel, OrganizationModel, DepartmentModel } from '../models/CRMModels.js';
+import { MarketModel, IndividualModel, OrganizationModel, DepartmentModel, EventModel } from '../models/CRMModels.js';
 import { db } from '../config/firebase.js';
 import { collection, doc, setDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -11,33 +11,41 @@ class CRMService {
         this.courses = [];
         this.topics = [];
         this.contents = [];
+        this.events = [];
     }
 
     async loadInitialData() {
         console.log("DEBUG: CRMService.loadInitialData started...");
         
         try {
-            console.log("DEBUG: Fetching full intelligence graph...");
-            
-            const [orgSnap, deptSnap, indSnap, courseSnap, topicSnap, contentSnap] = await Promise.all([
-                getDocs(collection(db, "organizations")),
-                getDocs(collection(db, "departments")),
-                getDocs(collection(db, "individuals")),
-                getDocs(collection(db, "courses")),
-                getDocs(collection(db, "topics")),
-                getDocs(collection(db, "content"))
+            const fetchCollection = async (name) => {
+                console.log(`DEBUG: Fetching collection: ${name}`);
+                const snap = await getDocs(collection(db, name));
+                console.log(`DEBUG: Received ${snap.docs.length} docs from ${name}`);
+                return snap.docs.map(doc => doc.data());
+            };
+
+            const [orgs, depts, inds, courses, topics, content, events] = await Promise.all([
+                fetchCollection("organizations"),
+                fetchCollection("departments"),
+                fetchCollection("individuals"),
+                fetchCollection("courses"),
+                fetchCollection("topics"),
+                fetchCollection("content"),
+                fetchCollection("events")
             ]);
 
-            this.organizations = orgSnap.docs.map(doc => doc.data());
-            this.departments = deptSnap.docs.map(doc => doc.data());
-            this.individuals = indSnap.docs.map(doc => doc.data());
-            this.courses = courseSnap.docs.map(doc => doc.data());
-            this.topics = topicSnap.docs.map(doc => doc.data());
-            this.contents = contentSnap.docs.map(doc => doc.data());
+            this.organizations = orgs;
+            this.departments = depts;
+            this.individuals = inds;
+            this.courses = courses;
+            this.topics = topics;
+            this.contents = content;
+            this.events = events;
 
-            console.log(`DEBUG: Loaded Intelligence Graph: ${this.organizations.length} Orgs, ${this.courses.length} Courses, ${this.topics.length} Topics.`);
+            this.generateEventsFromSyllabi();
+            console.log("DEBUG: Intelligence Graph synced successfully.");
             
-            // Default Market for Map
             this.markets = this.organizations.map(org => MarketModel({
                 id: org.id,
                 name: org.name,
@@ -46,8 +54,41 @@ class CRMService {
             }));
 
         } catch (e) {
-            console.warn("DEBUG: WARNING Firestore access issue in loadInitialData:", e);
+            console.error("DEBUG: CRITICAL Firestore access issue:", e.code, e.message, e);
         }
+    }
+
+    generateEventsFromSyllabi() {
+        console.log(`DEBUG: generateEventsFromSyllabi - Processing ${this.courses.length} courses.`);
+        this.courses.forEach(course => {
+            if (!course.startDate) {
+                console.warn(`DEBUG: Course ${course.code} missing startDate.`);
+                return;
+            }
+            
+            const startDate = new Date(course.startDate);
+            
+            course.syllabus.forEach(item => {
+                // Calculate date: StartDate + (Week - 1) * 7 days
+                const eventDate = new Date(startDate);
+                eventDate.setDate(startDate.getDate() + (item.week - 1) * 7);
+                
+                const topic = this.topics.find(t => t.id === item.topicId);
+                
+                const event = EventModel({
+                    orgId: course.orgId,
+                    courseId: course.id,
+                    topicId: item.topicId,
+                    title: `${course.code}: ${topic?.name || item.topicId}`,
+                    type: item.topicId.includes('exam') ? 'exam' : 'class',
+                    date: eventDate.toISOString().split('T')[0],
+                    description: `Course: ${course.name}`
+                });
+                
+                this.events.push(event);
+            });
+        });
+        console.log(`DEBUG: Total events in CRMService: ${this.events.length}`);
     }
 
     getAnalyticsData() {
@@ -55,7 +96,8 @@ class CRMService {
             organizations: this.organizations,
             courses: this.courses,
             topics: this.topics,
-            content: this.contents
+            content: this.contents,
+            events: this.events
         };
     }
 

@@ -95,11 +95,29 @@
             </div>
 
             <div id="view-timeline" class="view-container hidden">
-                <div class="p-8 overflow-y-auto">
-                    <h2 class="text-xl mb-8">Cognitive Calendar: The Educational Weather Forecast</h2>
-                    <div id="timeline-content">
-                        <!-- Timeline components injected here -->
+                <div class="intel-view-header">
+                    <div class="flex-col">
+                        <h2 class="text-xl">Operational Calendar</h2>
+                        <p class="text-xs text-secondary">Synchronized Academic Intelligence</p>
                     </div>
+                    
+                    <div class="flex gap-4 items-center">
+                        <div class="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                            <button class="res-btn px-4 py-2 text-[10px] font-black rounded-lg active" data-res="month">MONTH</button>
+                            <button class="res-btn px-4 py-2 text-[10px] font-black rounded-lg" data-res="week">WEEK</button>
+                            <button class="res-btn px-4 py-2 text-[10px] font-black rounded-lg" data-res="day">DAY</button>
+                        </div>
+
+                        <select id="semester-filter" class="intel-search-input py-2 text-[10px] font-black w-32">
+                            <option value="Winter">WINTER 2026</option>
+                            <option value="Spring">SPRING 2026</option>
+                            <option value="Fall">FALL 2026</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="calendar-portal-main flex-1 p-8 overflow-hidden">
+                    <div id="calendar-content" class="h-full w-full"></div>
                 </div>
             </div>
 

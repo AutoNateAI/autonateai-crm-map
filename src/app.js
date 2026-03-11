@@ -12,6 +12,7 @@ import { analyticsPanel } from './components/AnalyticsPanel.js';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard.js';
 import { UniversityDetail } from './components/UniversityDetail.js';
 import { TimelineRadar } from './components/TimelineRadar.js';
+import { calendarPanel } from './components/CalendarPanel.js';
 
 // Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
 let mapboxConfig = { token: '' };
@@ -27,11 +28,26 @@ try {
 
 class App {
     constructor() {
-        this.currentView = 'geo-map';
+        this.currentView = 'timeline'; // SET TIMELINE AS LANDING DASHBOARD
         this.isRegisterMode = false;
         this.map = null;
         console.log("DEBUG: App Constructor - Starting Initialization...");
         this.init();
+        this.bindPortalEvents();
+    }
+
+    bindPortalEvents() {
+        window.addEventListener('portal-nav', (e) => {
+            console.log("DEBUG: Portal Navigation Triggered ->", e.detail);
+            this.currentView = e.detail;
+            
+            // Sync navigation active state
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === this.currentView);
+            });
+
+            this.renderView();
+        });
     }
 
     async init() {
@@ -179,8 +195,11 @@ class App {
 
         const activeView = document.getElementById(`view-${this.currentView}`);
         if (activeView) {
+            console.log("DEBUG: Activating container:", `view-${this.currentView}`);
             activeView.classList.remove('hidden');
             activeView.classList.add('active');
+        } else {
+            console.error("DEBUG: Container not found for view:", this.currentView);
         }
 
         if (this.currentView === 'geo-map') this.initMap();
@@ -194,12 +213,36 @@ class App {
     }
 
     initTimelineView() {
-        console.log("DEBUG: Initializing Timeline Radar...");
-        const container = document.getElementById('timeline-content');
-        if (!container) return;
+        console.log("DEBUG: Initializing Operational Calendar...");
+        const calendarContainer = document.getElementById('calendar-content');
+        const resBtns = document.querySelectorAll('.res-btn');
+        const semesterFilter = document.getElementById('semester-filter');
 
         const data = crmService.getAnalyticsData();
-        TimelineRadar.render(container, data);
+
+        // 1. Render Default (Month View)
+        calendarPanel.view = 'month';
+        calendarPanel.render(calendarContainer, data);
+
+        // 2. Bind Resolution Switcher
+        resBtns.forEach(btn => {
+            btn.onclick = () => {
+                const res = btn.dataset.res;
+                console.log("DEBUG: Switching Calendar Resolution ->", res);
+                resBtns.forEach(b => b.classList.toggle('active', b === btn));
+                
+                calendarPanel.view = res;
+                calendarPanel.render(calendarContainer, data);
+            };
+        });
+
+        // 3. Bind Semester Filter
+        if (semesterFilter) {
+            semesterFilter.onchange = (e) => {
+                console.log("DEBUG: Semester Filter Change ->", e.target.value);
+                // Implementation for semester data switching goes here
+            };
+        }
     }
 
     initAnalyticsView() {
@@ -340,7 +383,7 @@ class App {
             elements: elements,
             style: [
                 {
-                    selector: 'node',
+                    selector: 'node[name]', // ONLY NODES WITH NAMES GET LABELS
                     style: {
                         'label': 'data(name)',
                         'color': '#f0f0f5',
@@ -355,7 +398,7 @@ class App {
                     }
                 },
                 {
-                    selector: 'node[type="individual"]',
+                    selector: 'node[type="individual"][hotness]', // ONLY INDIVIDUALS WITH HOTNESS GET SCALED
                     style: {
                         'width': 'mapData(hotness, 0, 100, 20, 60)',
                         'height': 'mapData(hotness, 0, 100, 20, 60)'
