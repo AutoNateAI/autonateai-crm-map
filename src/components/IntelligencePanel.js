@@ -87,6 +87,11 @@ export class IntelligencePanel {
             if (e.key === 'ArrowRight') this.next();
             if (e.key === 'ArrowLeft') this.prev();
         };
+
+        // Real-time Resize/Zoom Response
+        window.addEventListener('resize', () => {
+            this.updateCarousel();
+        });
     }
 
     handleStart(e) {
