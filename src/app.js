@@ -234,48 +234,105 @@ class App {
     }
 
     initCognitiveGraph() {
-        console.log("App: Initializing Cognitive Graph...");
+        console.log("DEBUG: Initializing Cytoscape Cognitive Graph...");
         const container = document.getElementById('d3-container');
         if (!container) return;
-        container.innerHTML = '';
         
-        const width = container.clientWidth;
-        const height = container.clientHeight;
+        const orgs = crmService.organizations;
+        const depts = crmService.departments;
         const individuals = crmService.getIndividuals();
-        
-        const nodes = individuals.map(ind => ({ id: ind.id, name: ind.name, hotness: ind.hotnessScore }));
-        const links = [];
-        
-        const svg = d3.select("#d3-container").append("svg")
-            .attr("width", width)
-            .attr("height", height);
 
-        const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id(d => d.id))
-            .force("charge", d3.forceManyBody().strength(-200))
-            .force("center", d3.forceCenter(width / 2, height / 2));
+        const elements = [];
 
-        const node = svg.append("g")
-            .selectAll("circle")
-            .data(nodes)
-            .join("circle")
-            .attr("r", d => 5 + (d.hotness / 10))
-            .attr("fill", d => d.hotness > 80 ? "#ff6600" : "#00ffcc")
-            .call(d3.drag()
-                .on("start", (event, d) => {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    d.fx = d.x; d.fy = d.y;
-                })
-                .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
-                .on("end", (event, d) => {
-                    if (!event.active) simulation.alphaTarget(0);
-                    d.fx = null; d.fy = null;
-                }));
+        // Add Organizations as Parent Nodes
+        orgs.forEach(org => {
+            elements.push({ data: { id: org.id, name: org.name, type: 'org' }, classes: 'org-node' });
+        });
 
-        node.append("title").text(d => d.name);
+        // Add Departments as Compound Nodes (inside Orgs)
+        depts.forEach(dept => {
+            elements.push({ data: { id: dept.id, parent: dept.orgId, name: dept.name, type: 'dept' }, classes: 'dept-node' });
+        });
 
-        simulation.on("tick", () => {
-            node.attr("cx", d => d.x).attr("cy", d => d.y);
+        // Add Individuals inside Departments
+        individuals.forEach(ind => {
+            elements.push({ 
+                data: { 
+                    id: ind.id, 
+                    parent: ind.departmentId || 'gvsu-cs', // Fallback for dummy data
+                    name: ind.name, 
+                    type: 'individual',
+                    hotness: ind.hotnessScore 
+                }, 
+                classes: ind.hotnessScore > 80 ? 'hot-individual' : 'individual-node' 
+            });
+        });
+
+        if (this.cy) this.cy.destroy();
+
+        this.cy = cytoscape({
+            container: container,
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'label': 'data(name)',
+                        'color': '#f0f0f5',
+                        'font-size': '10px',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'background-color': '#24242e',
+                        'border-width': 1,
+                        'border-color': '#00ffcc',
+                        'width': 'mapData(hotness, 0, 100, 20, 60)',
+                        'height': 'mapData(hotness, 0, 100, 20, 60)',
+                        'transition-property': 'background-color, line-color, target-arrow-color',
+                        'transition-duration': '0.5s'
+                    }
+                },
+                {
+                    selector: ':parent',
+                    style: {
+                        'background-opacity': 0.05,
+                        'background-color': '#00ffcc',
+                        'border-color': '#00ffcc',
+                        'border-style': 'dashed',
+                        'text-valign': 'top',
+                        'text-halign': 'center',
+                        'padding': '20px'
+                    }
+                },
+                {
+                    selector: '.hot-individual',
+                    style: {
+                        'background-color': '#ff6600',
+                        'border-color': '#fff',
+                        'border-width': 2
+                    }
+                }
+            ],
+            layout: {
+                name: 'cose',
+                padding: 50,
+                animate: true,
+                componentSpacing: 100,
+                nodeRepulsion: 4000
+            }
+        });
+
+        // Anime.js interaction animation
+        this.cy.on('tap', 'node', (evt) => {
+            const node = evt.target;
+            console.log("DEBUG: Tapped node", node.data('name'));
+            
+            anime({
+                targets: node.position(),
+                x: node.position().x + (Math.random() - 0.5) * 20,
+                y: node.position().y + (Math.random() - 0.5) * 20,
+                duration: 500,
+                easing: 'spring(1, 80, 10, 0)'
+            });
         });
     }
 
