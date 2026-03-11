@@ -12,9 +12,12 @@ import { DataTransformationService } from './services/DataTransformationService.
 let mapboxConfig = { token: '' };
 try {
     const config = await import('./config/mapbox.js');
-    mapboxConfig = config.mapboxConfig;
+    if (config && config.mapboxConfig) {
+        mapboxConfig = config.mapboxConfig;
+        console.log("App: Local Mapbox config loaded.");
+    }
 } catch (e) {
-    console.warn("Mapbox config not found. Map will not load until token is provided.");
+    console.warn("App: Local Mapbox config not found. Attempting to fetch from Remote Intelligence...");
 }
 
 class App {
@@ -22,40 +25,76 @@ class App {
         this.currentView = 'geo-map';
         this.isRegisterMode = false;
         this.map = null;
-        console.log("App: Initializing...");
+        console.log("DEBUG: App Constructor - Starting Initialization...");
         this.init();
     }
 
     async init() {
-        this.bindAuthEvents();
-        this.bindNavigation();
-        this.bindIngestionZone();
-        this.monitorAuthState();
+        try {
+            console.log("DEBUG: App.init() - Binding Events...");
+            this.bindAuthEvents();
+            this.bindNavigation();
+            this.bindIngestionZone();
+            
+            console.log("DEBUG: App.init() - Monitoring Auth State...");
+            this.monitorAuthState();
+            console.log("DEBUG: App.init() - Done.");
+        } catch (error) {
+            console.error("DEBUG: CRITICAL ERROR during App.init():", error);
+        }
+    }
+
+    async fetchRemoteConfig() {
+        if (mapboxConfig.token) {
+            console.log("DEBUG: Mapbox token already present.");
+            return;
+        }
+        
+        try {
+            console.log("DEBUG: Fetching 'mapbox_token' from Firestore...");
+            const remoteToken = await crmService.getRemoteConfig('mapbox_token');
+            if (remoteToken) {
+                mapboxConfig.token = remoteToken;
+                console.log("DEBUG: Remote Mapbox config loaded successfully.");
+                if (this.currentView === 'geo-map') this.initMap();
+            } else {
+                console.warn("DEBUG: Remote Mapbox token returned null.");
+            }
+        } catch (e) {
+            console.error("DEBUG: Failed to fetch remote config:", e);
+        }
     }
 
     monitorAuthState() {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                console.log("App: User authenticated", user.email);
+                console.log("DEBUG: Auth State - User LOGGED IN:", user.email);
+                await this.fetchRemoteConfig();
                 this.onLoginSuccess(user);
             } else {
-                console.log("App: User not authenticated");
+                console.log("DEBUG: Auth State - User LOGGED OUT");
                 this.onLogoutSuccess();
             }
         });
     }
 
     bindAuthEvents() {
+        console.log("DEBUG: Binding Auth Events...");
         const primaryBtn = document.getElementById('auth-primary-btn');
         const toggleBtn = document.getElementById('auth-toggle-btn');
         const emailInput = document.getElementById('auth-email');
         const passInput = document.getElementById('auth-password');
         const errorDiv = document.getElementById('auth-error');
+        const logoutBtn = document.getElementById('auth-logout-btn');
+
+        if (!primaryBtn || !toggleBtn || !logoutBtn) {
+            throw new Error("Required Auth DOM elements missing!");
+        }
 
         primaryBtn.addEventListener('click', async () => {
             const email = emailInput.value;
             const password = passInput.value;
-            console.log("App: Login attempt for", email);
+            console.log("DEBUG: Auth Primary Btn clicked for:", email);
             
             errorDiv.classList.add('hidden');
             primaryBtn.textContent = "Processing...";
@@ -63,12 +102,14 @@ class App {
 
             try {
                 if (this.isRegisterMode) {
+                    console.log("DEBUG: Attempting Firebase Registration...");
                     await createUserWithEmailAndPassword(auth, email, password);
                 } else {
+                    console.log("DEBUG: Attempting Firebase Login...");
                     await signInWithEmailAndPassword(auth, email, password);
                 }
             } catch (error) {
-                console.error("App: Auth error", error);
+                console.error("DEBUG: Firebase Auth Error:", error.code, error.message);
                 errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
                 primaryBtn.textContent = this.isRegisterMode ? "Register" : "Initialize Session";
@@ -83,21 +124,25 @@ class App {
             toggleBtn.textContent = this.isRegisterMode ? "Already have an account? Login" : "Need an account? Register";
         });
 
-        document.getElementById('auth-logout-btn').addEventListener('click', () => {
+        logoutBtn.addEventListener('click', () => {
+            console.log("DEBUG: Logout requested.");
             signOut(auth);
         });
     }
 
     async onLoginSuccess(user) {
+        console.log("DEBUG: onLoginSuccess called for:", user.email);
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
         document.getElementById('user-display').textContent = `Operator: ${user.email}`;
         
         try {
+            console.log("DEBUG: Calling crmService.loadInitialData()...");
             await crmService.loadInitialData();
+            console.log("DEBUG: Data load complete. Rendering view...");
             this.renderView();
         } catch (e) {
-            console.error("App: Error loading initial data", e);
+            console.error("DEBUG: ERROR in onLoginSuccess data sequence:", e);
         }
     }
 
@@ -282,6 +327,19 @@ class App {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const startApp = () => {
+    console.log("DEBUG: Initializing App Instance...");
     new App();
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DEBUG: DOMContentLoaded fired.");
+        startApp();
+    });
+} else {
+    console.log("DEBUG: DOM already ready. Starting App immediately.");
+    startApp();
+}
+
+console.log("DEBUG: app.js Script Execution Complete.");

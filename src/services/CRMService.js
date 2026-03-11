@@ -1,6 +1,6 @@
 import { MarketModel, IndividualModel } from '../models/CRMModels.js';
 import { db } from '../config/firebase.js';
-import { collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, doc, setDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 class CRMService {
     constructor() {
@@ -8,7 +8,25 @@ class CRMService {
         this.individuals = [];
     }
 
+    async getRemoteConfig(id) {
+        console.log(`DEBUG: CRMService.getRemoteConfig fetching ID: ${id}`);
+        try {
+            const configRef = doc(db, "config", id);
+            const configDoc = await getDoc(configRef);
+            if (configDoc.exists()) {
+                console.log(`DEBUG: Remote Config FOUND for ${id}`);
+                return configDoc.data().value;
+            }
+            console.warn(`DEBUG: Remote Config NOT FOUND for ID: ${id}`);
+            return null;
+        } catch (e) {
+            console.error(`DEBUG: ERROR in CRMService.getRemoteConfig for ${id}:`, e);
+            return null;
+        }
+    }
+
     async loadInitialData() {
+        console.log("DEBUG: CRMService.loadInitialData started...");
         // Default GVSU Market
         const gvsu = MarketModel({
             id: 'gvsu-cs',
@@ -21,11 +39,14 @@ class CRMService {
         this.markets = [gvsu];
 
         try {
+            console.log("DEBUG: Fetching individuals from Firestore...");
             const querySnapshot = await getDocs(collection(db, "individuals"));
             this.individuals = querySnapshot.docs.map(doc => doc.data());
+            console.log(`DEBUG: Firestore returned ${this.individuals.length} individuals.`);
             
             // Add dummy data for visualization testing if empty
             if (this.individuals.length === 0) {
+                console.log("DEBUG: Using dummy test data...");
                 this.individuals = [
                     IndividualModel({
                         id: 'dummy-1',
@@ -47,9 +68,8 @@ class CRMService {
                     })
                 ];
             }
-            console.log(`CRM Service: Loaded ${this.individuals.length} individuals.`);
         } catch (e) {
-            console.warn("CRM Service: Firestore access issue.", e);
+            console.warn("DEBUG: WARNING Firestore access issue in loadInitialData:", e);
         }
     }
 
