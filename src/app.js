@@ -11,6 +11,7 @@ import { intelPanel } from './components/IntelligencePanel.js';
 import { analyticsPanel } from './components/AnalyticsPanel.js';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard.js';
 import { UniversityDetail } from './components/UniversityDetail.js';
+import { TimelineRadar } from './components/TimelineRadar.js';
 
 // Try to import mapboxConfig, but don't crash if it's missing (e.g. in local dev)
 let mapboxConfig = { token: '' };
@@ -162,6 +163,7 @@ class App {
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 this.currentView = e.target.dataset.view;
+                console.log("DEBUG: Navigation Click ->", this.currentView);
                 navItems.forEach(btn => btn.classList.toggle('active', btn.dataset.view === this.currentView));
                 this.renderView();
             });
@@ -169,7 +171,7 @@ class App {
     }
 
     renderView() {
-        console.log("App: Rendering view", this.currentView);
+        console.log("DEBUG: App.renderView switching to:", this.currentView);
         document.querySelectorAll('.view-container').forEach(view => {
             view.classList.remove('active');
             view.classList.add('hidden');
@@ -185,9 +187,19 @@ class App {
         if (this.currentView === 'cognitive-map') this.initCognitiveGraph();
         if (this.currentView === 'intelligence') this.initIntelligenceView();
         if (this.currentView === 'analytics') this.initAnalyticsView();
+        if (this.currentView === 'timeline') this.initTimelineView();
         if (this.currentView === 'university-detail') this.initUniversityDetail();
         
         this.updateSidebarContent();
+    }
+
+    initTimelineView() {
+        console.log("DEBUG: Initializing Timeline Radar...");
+        const container = document.getElementById('timeline-content');
+        if (!container) return;
+
+        const data = crmService.getAnalyticsData();
+        TimelineRadar.render(container, data);
     }
 
     initAnalyticsView() {
