@@ -95,29 +95,19 @@
             </div>
 
             <div id="view-timeline" class="view-container hidden">
-                <div class="intel-view-header">
+                <div class="intel-view-header pb-4">
                     <div class="flex-col">
-                        <h2 class="text-xl">Operational Calendar</h2>
-                        <p class="text-xs text-secondary">Synchronized Academic Intelligence</p>
+                        <h2 class="text-xl">Educational Weather Radar</h2>
+                        <p class="text-xs text-secondary">Synchronized Semantic Timeline</p>
                     </div>
-                    
-                    <div class="flex gap-4 items-center">
-                        <div class="flex bg-white/5 p-1 rounded-xl border border-white/5">
-                            <button class="res-btn px-4 py-2 text-[10px] font-black rounded-lg active" data-res="month">MONTH</button>
-                            <button class="res-btn px-4 py-2 text-[10px] font-black rounded-lg" data-res="week">WEEK</button>
-                            <button class="res-btn px-4 py-2 text-[10px] font-black rounded-lg" data-res="day">DAY</button>
-                        </div>
-
-                        <select id="semester-filter" class="intel-search-input py-2 text-[10px] font-black w-32">
-                            <option value="Winter">WINTER 2026</option>
-                            <option value="Spring">SPRING 2026</option>
-                            <option value="Fall">FALL 2026</option>
-                        </select>
+                    <div class="flex items-center gap-2 text-accent font-bold">
+                        <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                        <span class="text-[10px] tracking-widest uppercase">System Synchronized</span>
                     </div>
                 </div>
 
-                <div class="calendar-portal-main flex-1 p-8 overflow-hidden">
-                    <div id="calendar-content" class="h-full w-full"></div>
+                <div class="p-8 pt-0 flex-1 overflow-hidden" id="timeline-radar-container">
+                    <!-- The new vertical timeline radar injects here -->
                 </div>
             </div>
 

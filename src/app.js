@@ -213,36 +213,12 @@ class App {
     }
 
     initTimelineView() {
-        console.log("DEBUG: Initializing Operational Calendar...");
-        const calendarContainer = document.getElementById('calendar-content');
-        const resBtns = document.querySelectorAll('.res-btn');
-        const semesterFilter = document.getElementById('semester-filter');
+        console.log("DEBUG: Initializing Educational Weather Radar...");
+        const container = document.getElementById('timeline-radar-container');
+        if (!container) return;
 
         const data = crmService.getAnalyticsData();
-
-        // 1. Render Default (Month View)
-        calendarPanel.view = 'month';
-        calendarPanel.render(calendarContainer, data);
-
-        // 2. Bind Resolution Switcher
-        resBtns.forEach(btn => {
-            btn.onclick = () => {
-                const res = btn.dataset.res;
-                console.log("DEBUG: Switching Calendar Resolution ->", res);
-                resBtns.forEach(b => b.classList.toggle('active', b === btn));
-                
-                calendarPanel.view = res;
-                calendarPanel.render(calendarContainer, data);
-            };
-        });
-
-        // 3. Bind Semester Filter
-        if (semesterFilter) {
-            semesterFilter.onchange = (e) => {
-                console.log("DEBUG: Semester Filter Change ->", e.target.value);
-                // Implementation for semester data switching goes here
-            };
-        }
+        TimelineRadar.render(container, data);
     }
 
     initAnalyticsView() {
