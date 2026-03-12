@@ -153,6 +153,7 @@ class App {
 
     async onLoginSuccess(user) {
         console.log("DEBUG: onLoginSuccess called for:", user.email);
+        document.body.classList.add('app-authenticated');
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
         document.getElementById('user-display').textContent = `Operator: ${user.email}`;
@@ -168,10 +169,12 @@ class App {
     }
 
     onLogoutSuccess() {
+        document.body.classList.remove('app-authenticated');
         document.getElementById('app').classList.add('hidden');
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('auth-primary-btn').disabled = false;
         document.getElementById('auth-primary-btn').textContent = "Initialize Session";
+        document.getElementById('auth-password').value = '';
     }
 
     bindNavigation() {
